@@ -5,7 +5,9 @@ def ricetta_realizzabile(ricetta, disp):
     Controlla se la ricetta è realizzabile con gli ingredienti attualmente disponibili.
     """
     for ingrediente, quantita_richiesta in ricetta["ingredients"].items():
-        if (disp.get(ingrediente, 0) < quantita_richiesta) or (quantita_richiesta == 0):
+        #print(ingrediente, quantita_richiesta)
+        print(disp.get(ingrediente, 0))
+        if (disp.get(ingrediente, 0) < quantita_richiesta) and disp.get(ingrediente, 0) != 0:
             return False  # Se un ingrediente non è sufficiente, la ricetta non è realizzabile
     return True
 
@@ -46,7 +48,6 @@ def seleziona_ricette(ingredienti_disponibili, lista_ricette):
             break
 
         # Aggiungi la ricetta selezionata
-        print(migliore_punteggio)
         ricette_selezionate.append({
             "title": migliore_ricetta["title"],
             "score": migliore_punteggio,
@@ -63,10 +64,9 @@ def seleziona_ricette(ingredienti_disponibili, lista_ricette):
 # Simuliamo un dizionario di ingredienti disponibili (quantità in grammi o ml)
 # N.B.: Se abbiamo unità diverse, vanno convertite in un’unità coerente. 
 ingredienti_disponibili = {
-    "carrots": 10,
-    "garlic": 20,
-    "onions": 5,
-    "tomato": 100, 
+    "kidney beans":10,
+    "carrots":10
+ 
     # grammi
     # Non abbiamo avocado, basilico, microgreens, ecc. Quindi potremmo comunque considerarli 0.
     # Se un ingrediente manca completamente, non potremo realizzare la ricetta se serve >0 di quello.
