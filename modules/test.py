@@ -5,14 +5,9 @@ def ricetta_realizzabile(ricetta, disp):
     Controlla se la ricetta è realizzabile con gli ingredienti attualmente disponibili.
     """
     for ingrediente, quantita_richiesta in ricetta["ingredients"].items():
-        for disp_ingrediente, quantita_disp in disp.items():
-                if disp.get(ingrediente,0) < quantita_richiesta:
-                    continue
-                else:
-                    return False
-        return True
-
-
+        if (disp.get(ingrediente, 0) < quantita_richiesta) or (quantita_richiesta == 0):
+            return False  # Se un ingrediente non è sufficiente, la ricetta non è realizzabile
+    return True
 
 def calcola_punteggio(ricetta, disp):
     score = 0
