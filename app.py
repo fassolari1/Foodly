@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from modules.receips import receipsCore
-from modules.greeady import greedy_select_recipes
+from modules.recipes import recipesCore
+from modules.greedy import greedy_select_recipes
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -17,9 +17,9 @@ def validate_bearer_token(auth_header):
     return None
 
 
-@app.route('/api/v1/getGreeady', methods=['POST'])
+@app.route('/api/v1/getGreedy', methods=['POST'])
 
-def sendRequestGreeady():
+def sendRequestGreedy():
     auth_header = request.headers.get('Authorization')
     token = validate_bearer_token(auth_header)
     if token is None:
@@ -39,7 +39,7 @@ def sendRequestGreeady():
     else:
         return jsonify(status='KO', message='Something went wrong')
     
-@app.route('/api/v1/getReceips', methods=['POST'])
+@app.route('/api/v1/getRecipes', methods=['POST'])
 
 def sendRequest():
     auth_header = request.headers.get('Authorization')
@@ -53,11 +53,17 @@ def sendRequest():
     if not spoonecularToken:
         return jsonify(status='KO', message='Your spoonecular token is missing', code=400)
     
-    response = receipsCore(spoonecularToken)
+    response = recipesCore(spoonecularToken)
     if response:
         return jsonify(status='OK', receips=response)
     else:
         return jsonify(status='KO', message='Something went wrong')
+
+
+@app.route('/api/v1/test', methods=['POST'])
+def test():
+    return jsonify(status='OK', message='This is a Test!')
+
 
 if __name__ == "__main__":
     app.run(port=8080, debug=True)
