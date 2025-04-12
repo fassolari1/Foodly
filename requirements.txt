@@ -2,3 +2,4 @@ requests
 flask_cors
 flask
 zappa
+mysql-connector-python

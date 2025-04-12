@@ -1,3 +1,4 @@
+import mysql.connector 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from modules.recipes import recipesCore
@@ -60,9 +61,22 @@ def sendRequest():
         return jsonify(status='KO', message='Something went wrong')
 
 
-@app.route('/api/v1/test', methods=['POST'])
+@app.route('/api/v1/query', methods=['POST'])
 def test():
-    return jsonify(status='OK', message='This is a Test!')
+    mydb = mysql.connector.connect(
+    host="foodlydb.cdyqekyui42m.eu-north-1.rds.amazonaws.com",
+    user="admin",
+    password="xinvUq-fygwa6-sibfih",
+    database="foodly"
+    )
+
+    mycursor = mydb.cursor()
+    mycursor.execute("SELECT * FROM users")
+    myresult = mycursor.fetchall()
+
+    return jsonify(myresult)
+
+
 
 
 if __name__ == "__main__":
