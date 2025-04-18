@@ -18,27 +18,6 @@ def validate_bearer_token(auth_header):
     return None
 
 
-@app.route('/api/v1/getGreedy', methods=['POST'])
-
-def sendRequestGreedy():
-    auth_header = request.headers.get('Authorization')
-    token = validate_bearer_token(auth_header)
-    if token is None:
-        return jsonify(status='KO', message='Bearer token is not present or invalid', code=401)
-    
-    data = request.get_json()
-    spoonecularToken = data.get('spoonecularToken') if data else None
-    
-    if not spoonecularToken:
-        return jsonify(status='KO', message='Your spoonecular token is missing', code=400)
-    
-    response = receipsCore(spoonecularToken)
-    if response:
-        receips_data = response["results"]
-        best_set = greedy_select_recipes(receips_data, data.get('user_ing'))
-        return jsonify(status='OK', message=best_set)
-    else:
-        return jsonify(status='KO', message='Something went wrong')
     
 @app.route('/api/v1/getRecipes', methods=['POST'])
 
@@ -60,7 +39,7 @@ def sendRequest():
     else:
         return jsonify(status='KO', message='Something went wrong')
 
-
+'''
 @app.route('/api/v1/query', methods=['POST'])
 def test():
     mydb = mysql.connector.connect(
@@ -75,8 +54,22 @@ def test():
     myresult = mycursor.fetchall()
 
     return jsonify(myresult)
+'''
 
+@app.route('/api/v1/Registration', methods=['POST'])
+def registration():
+    mydb = mysql.connector.connect(
+    host="foodlydb.cdyqekyui42m.eu-north-1.rds.amazonaws.com",
+    user="admin",
+    password="xinvUq-fygwa6-sibfih",
+    database="foodly"
+    )
 
+    mycursor = mydb.cursor()
+    mycursor.execute("SELECT * FROM users")
+    myresult = mycursor.fetchall()
+
+    return jsonify(myresult)
 
 
 if __name__ == "__main__":
