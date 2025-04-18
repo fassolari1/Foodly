@@ -85,6 +85,7 @@ def seleziona_ricette(ingredienti_disponibili, lista_ricette):
 
 # Simuliamo un dizionario di ingredienti disponibili (quantità in grammi o ml)
 # N.B.: Se abbiamo unità diverse, vanno convertite in un’unità coerente. 
+#TODO da passsare nella JSON con la POST
 ingredienti_disponibili = {
     "carrots":10,
     "garlic":6

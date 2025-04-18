@@ -101,5 +101,10 @@ def test():
     return jsonify(myresult)
 
 
+
+#TODO: Login, Greedy, SerchIndedients, Get Profile (dell'utente passato tramite ID, loggato), GetDispensa
+#TODO Ingredienti: SELECT * FROM ingredients WHERE NAME LIKE 'VAR%'
+#TODO DB: AGGIUNGERE Grammi a PANTRY  #aggiungere ShoppingList
+
 if __name__ == "__main__":
     app.run(port=8080, debug=True)
