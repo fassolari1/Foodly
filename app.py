@@ -146,7 +146,12 @@ def login():
         session['id_user'] = user_with_password[0]  # Supponendo che il primo campo sia l'ID utente
         session['email'] = user_with_password[3]    # Supponendo che il quarto campo sia l'email
 
-        return jsonify(status='OK', message='Login successful', user=user_with_password)
+        # Converti i risultati in un dizionario chiave-valore
+        # TODO evita che ritorni la password
+        column_names = [desc[0] for desc in mycursor.description]
+        user_dict = dict(zip(column_names, user_with_password))
+        
+        return jsonify(status='OK', message='Login successful', user=user_dict)
     
     except mysql.connector.Error as err:
         return jsonify(status='KO', message=f'Database error: {err}', code=500)
@@ -170,7 +175,13 @@ def get_profile():
         user = mycursor.fetchone()  # Ritorna la prima riga o None
         if user is None:
             return jsonify(status='KO', message='User not found', code=404)
-        return jsonify(status='OK', message='User profile retrieved', user=user)
+        
+        # Converti i risultati in un dizionario chiave-valore
+        # TODO evita che ritorni la password
+        column_names = [desc[0] for desc in mycursor.description]
+        user_dict = dict(zip(column_names, user))
+        
+        return jsonify(status='OK', message='User profile retrieved', user=user_dict)
     
     except mysql.connector.Error as err:
         return jsonify(status='KO', message=f'Database error: {err}', code=500)
@@ -190,10 +201,15 @@ def get_Pantry():
     mycursor = mydb.cursor()
     try:
         mycursor.execute("SELECT * FROM pantry WHERE id_user = %s", (id_user,))
-        Pantry = mycursor.fetchone()
-        if not Pantry:
+        rows = mycursor.fetchall()
+        if not rows:
             return jsonify(status='KO', message='No ingredients found in pantry', code=404)
-        return jsonify(status='OK', message='Pantry retrieved', id_user=id_user, pantry=Pantry)
+        
+        # Converti i risultati in un dizionario chiave-valore
+        column_names = [desc[0] for desc in mycursor.description]
+        pantry = [dict(zip(column_names, row)) for row in rows]
+        
+        return jsonify(status='OK', message='Pantry retrieved', id_user=id_user, pantry=pantry)
     
     except mysql.connector.Error as err:
         return jsonify(status='KO', message=f'Database error: {err}', code=500)
@@ -203,9 +219,9 @@ def get_Pantry():
 
 
 #COMPLETE: Login, Get Profile (dell'utente passato tramite ID, loggato), GetPantry
-#TODO: Greedy, SerchIndedients
-# quary di searchIngredients: SELECT * FROM ingredients WHERE NAME LIKE 'VAR%'
-#TODO DB: AGGIUNGERE Grammi a PANTRY, aggiungere ShoppingList
+#TODO: Greedy, SerchIndedients(query: SELECT * FROM ingredients WHERE name LIKE 'VAR%')
+#(?) DB: AGGIUNGERE Grammi a PANTRY, aggiungere ShoppingList
+#TODO
 
 if __name__ == "__main__":
     app.run(port=8080, debug=True)
