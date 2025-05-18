@@ -95,7 +95,7 @@ ingredienti_disponibili = {
 }
 
 # ===== PARSE DEL JSON =====
-with open('recipes.json' , "r") as json_data:
+with open('modules/recipes.json' , "r") as json_data:
     data = json.load(json_data) 
 
 # Per semplicità, estraiamo la lista di ricette. In questo caso, ne hai solo 1.
