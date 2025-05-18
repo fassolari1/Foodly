@@ -6,6 +6,7 @@ from flask import Flask, jsonify, request, session
 from flask_cors import CORS
 from modules.recipes import recipesCore
 from modules.greedy import greedy_select_recipes
+import json
 
 app = Flask(__name__)
 app.secret_key = "ajhaskjchksjdhcakjdhcjkashk" # Chiave segreta per le sessioni #TODO: Cambiare in produzione
@@ -101,7 +102,7 @@ def test():
     return jsonify(myresult)
 
 
-# Login: controlla se l'email e la password sono corrette
+# Login: controlla se l'email e la password sono corretti
 @app.route('/api/v1/Login', methods=['POST'])
 def login():
     auth_header = request.headers.get('Authorization')
@@ -217,9 +218,99 @@ def get_Pantry():
     finally:
         mycursor.close()
 
+# Add Pantry with user id, ingredient id and grams
+@app.route('/api/v1/AddPantry', methods=['POST'])
+def add_pantry():
+    # Verifica se l'utente è loggato
+    if 'id_user' not in session:
+        return jsonify(status='KO', message='User not logged in', code=401)
+    
+    id_user = session['id_user']
+    
+    data = request.get_json()
+    if not data:
+        return jsonify(status='KO', message='Your data is missing', code=400)
+    
+    id_ingredient = data.get('id_ingredient')
+    grams = data.get('grams')
+    units = data.get('units')
+    
+    if not id_ingredient:
+        return jsonify(status='KO', message='Missing id_ingredient', code=400)
+    if not grams and not units:
+        return jsonify(status='KO', message='Insert grams or units', code=400)
+        
+    mycursor = mydb.cursor()
+    try:
+        mycursor.execute("INSERT INTO pantry (id_user, id_ingredient, units, grams) VALUES (%s, %s, %s, %s)", (id_user, id_ingredient, units, grams))
+        mydb.commit() #chiusura dell'inserimento
+        return jsonify(status='OK', message='Ingredient added to pantry successfully')
+    
+    except mysql.connector.Error as err:
+        return jsonify(status='KO', message=f'Database error: {err}', code=500)
+    
+    finally:
+        mycursor.close()
 
-#COMPLETE: Login, Get Profile (dell'utente passato tramite ID, loggato), GetPantry
-#TODO: AddPantry(id ingred, grammi), Greedy, SerchIndedients(query: SELECT * FROM ingredients WHERE name LIKE 'VAR%')
+
+@app.route('/api/v1/RunGreedy', methods=['POST'])
+def run_greedy():
+    # Verifica se l'utente è loggato
+    if 'id_user' not in session:
+        return jsonify(status='KO', message='User not logged in', code=401)
+
+    data = request.get_json()
+    if not data:
+        return jsonify(status='KO', message='Your data is missing', code=400)
+
+    ingredienti_disponibili = data.get('ingredienti_disponibili')
+    if not ingredienti_disponibili:
+        return jsonify(status='KO', message='Missing ingredienti_disponibili', code=400)
+
+    # Importa la funzione Greedy da test.py
+    from modules.test import seleziona_ricette
+
+    # Carica le ricette dal file JSON
+    try:
+        with open('modules/recipes.json', "r") as json_data:
+            data = json.load(json_data)
+        ricette_raw = data["receips"]["results"]
+
+        # Prepara la lista di ricette
+        lista_ricette = []
+        for ricetta_raw in ricette_raw:
+            nome_ricetta = ricetta_raw["title"]
+            ingredienti_ricetta = {}
+            for ing in ricetta_raw["missedIngredients"]:
+                nome = ing["name"]
+                quantita = ing["amount"]
+                ingredienti_ricetta[nome] = quantita
+            lista_ricette.append({
+                "title": nome_ricetta,
+                "ingredients": ingredienti_ricetta
+            })
+
+        # Esegui l'algoritmo Greedy
+        risultato = seleziona_ricette(ingredienti_disponibili, lista_ricette)
+
+        return jsonify(status='OK', message='Greedy algorithm executed', data={
+            "ricette_selezionate": risultato,
+            "ingredienti_residui": ingredienti_disponibili
+        })
+
+    except FileNotFoundError:
+        return jsonify(status='KO', message='recipes.json file not found', code=500)
+    except Exception as e:
+        return jsonify(status='KO', message=f'An error occurred: {e}', code=500)
+
+
+#COMPLETE: Login, Get Profile (dell'utente passato tramite ID, loggato), GetPantry, AddPantry
+#TODO: Greedy:
+    #TODO ingredienti_disponibili presi da GetPantry
+    #TODO sistemare il greedy in modo che riconosca le unità di misura
+    #TODO Dobbiamo impostare Unità = medium, small, large, ecc.
+
+# TODO SerchIndedients(query: SELECT * FROM ingredients WHERE name LIKE 'VAR%')
 
 if __name__ == "__main__":
     app.run(port=8080, debug=True)
