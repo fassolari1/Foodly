@@ -75,11 +75,11 @@ def registration():
 
     except mysql.connector.Error as err:
         if err.errno == 1062: # Duplicate entry error
-            return jsonify(status='KO', message='Email already exists', code=409) #409 codice di conflitto
+            return jsonify(status='KO', message='Email already exists') #409 codice di conflitto
         else:
-            return jsonify(status='KO', message='Database error: {}'.format(err), code=500) #500 codice di errore interno
+            return jsonify(status='KO', message='Database error: {}'.format(err)) #500 codice di errore interno
     except Exception as e:
-        return jsonify(status='KO', message='An error occurred: {}'.format(e), code=500)
+        return jsonify(status='KO', message='An error occurred: {}'.format(e))
     
     mycursor.close()
     return jsonify(status='OK', message='Registration completed successfully')
@@ -190,11 +190,11 @@ def get_profile():
     finally:
         mycursor.close()  # Chiudi il cursore
 
-
+# ! togliere id estenro nella risposta
 @app.route('/api/v1/GetPantry', methods=['GET'])
 def get_Pantry():
     if 'id_user' not in session:
-        return jsonify(status='KO', message='User not logged in', code=401)
+        return jsonify(status='KO', message='User not logged in')
     
     id_user = session['id_user']
     
@@ -204,16 +204,16 @@ def get_Pantry():
         mycursor.execute("SELECT * FROM pantry WHERE id_user = %s", (id_user,))
         rows = mycursor.fetchall()
         if not rows:
-            return jsonify(status='KO', message='No ingredients found in pantry', code=404)
+            return jsonify(status='KO', message='No ingredients found in pantry')
         
         # Converti i risultati in un dizionario chiave-valore
         column_names = [desc[0] for desc in mycursor.description]
         pantry = [dict(zip(column_names, row)) for row in rows]
         
-        return jsonify(status='OK', message='Pantry retrieved', id_user=id_user, data=pantry)
+        return jsonify(status='OK', message='Pantry retrieved', data=pantry)
     
     except mysql.connector.Error as err:
-        return jsonify(status='KO', message=f'Database error: {err}', code=500)
+        return jsonify(status='KO', message=f'Database error: {err}')
     
     finally:
         mycursor.close()
@@ -223,22 +223,22 @@ def get_Pantry():
 def add_pantry():
     # Verifica se l'utente è loggato
     if 'id_user' not in session:
-        return jsonify(status='KO', message='User not logged in', code=401)
+        return jsonify(status='KO', message='User not logged in')
     
     id_user = session['id_user']
     
     data = request.get_json()
     if not data:
-        return jsonify(status='KO', message='Your data is missing', code=400)
+        return jsonify(status='KO', message='Your data is missing')
     
     id_ingredient = data.get('id_ingredient')
     grams = data.get('grams')
     units = data.get('units')
     
     if not id_ingredient:
-        return jsonify(status='KO', message='Missing id_ingredient', code=400)
+        return jsonify(status='KO', message='Missing id_ingredient')
     if not grams and not units:
-        return jsonify(status='KO', message='Insert grams or units', code=400)
+        return jsonify(status='KO', message='Insert grams or units')
         
     mycursor = mydb.cursor()
     try:
@@ -247,7 +247,7 @@ def add_pantry():
         return jsonify(status='OK', message='Ingredient added to pantry successfully')
     
     except mysql.connector.Error as err:
-        return jsonify(status='KO', message=f'Database error: {err}', code=500)
+        return jsonify(status='KO', message=f'Database error: {err}')
     
     finally:
         mycursor.close()
@@ -257,15 +257,15 @@ def add_pantry():
 def run_greedy():
     # Verifica se l'utente è loggato
     if 'id_user' not in session:
-        return jsonify(status='KO', message='User not logged in', code=401)
+        return jsonify(status='KO', message='User not logged in')
 
     data = request.get_json()
     if not data:
-        return jsonify(status='KO', message='Your data is missing', code=400)
+        return jsonify(status='KO', message='Your data is missing')
 
     ingredienti_disponibili = data.get('ingredienti_disponibili')
     if not ingredienti_disponibili:
-        return jsonify(status='KO', message='Missing ingredienti_disponibili', code=400)
+        return jsonify(status='KO', message='Missing ingredienti_disponibili')
 
     # Importa la funzione Greedy da test.py
     from modules.test import seleziona_ricette
@@ -299,9 +299,9 @@ def run_greedy():
         })
 
     except FileNotFoundError:
-        return jsonify(status='KO', message='recipes.json file not found', code=500)
+        return jsonify(status='KO', message='recipes.json file not found')
     except Exception as e:
-        return jsonify(status='KO', message=f'An error occurred: {e}', code=500)
+        return jsonify(status='KO', message=f'An error occurred: {e}')
 
 # SerchIndedients(query: SELECT * FROM ingredients WHERE name LIKE 'VAR%')
 @app.route('/api/v1/SearchIngredients', methods=['GET'])
