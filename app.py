@@ -2,7 +2,7 @@ import mysql.connector
 import config as config
 import mysql.connector
 from urllib.parse import urlparse
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from modules.recipes import recipesCore
 from modules.greedy import greedy_select_recipes
@@ -13,15 +13,16 @@ app.secret_key = "ajhaskjchksjdhcakjdhcjkashk" # Chiave segreta per le sessioni 
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 #Configurazione del database MySQL
-url = config.getMySQLUrl()
-parsed = urlparse(url)     #Lo "parsiamo"
-mydb = mysql.connector.connect(
-    host=parsed.hostname,
-    port=parsed.port or 3306,
-    user=parsed.username,
-    password=parsed.password,
-    database=parsed.path.lstrip('/')
-)
+def get_db_connection():
+    url = config.getMySQLUrl()
+    parsed = urlparse(url)  # Lo "parsiamo"
+    return mysql.connector.connect(
+        host=parsed.hostname,
+        port=parsed.port or 3306,
+        user=parsed.username,
+        password=parsed.password,
+        database=parsed.path.lstrip('/')
+    )
 
 
 def validate_bearer_token(auth_header):
@@ -68,6 +69,7 @@ def registration():
     if not name or not surname or not email or not password:
         return jsonify(status='KO', message='Your data is missing', code=400)
 
+    mydb = get_db_connection()
     mycursor = mydb.cursor()
     try:
         mycursor.execute("INSERT INTO users (name, surname, email, password) VALUES (%s, %s, %s, %s)", (name, surname, email, password))
@@ -83,24 +85,6 @@ def registration():
     
     mycursor.close()
     return jsonify(status='OK', message='Registration completed successfully')
-
-
-#chiamata di Test per utenti
-@app.route('/api/v1/testUsers', methods=['POST'])
-def test():
-    mydb = mysql.connector.connect(
-    host="foodlydb.cdyqekyui42m.eu-north-1.rds.amazonaws.com",
-    user="admin",
-    password="xinvUq-fygwa6-sibfih",
-    database="foodly"
-    )
-
-    mycursor = mydb.cursor()
-    mycursor.execute("SELECT * FROM users")
-    myresult = mycursor.fetchall()
-
-    return jsonify(myresult)
-
 
 # Login: controlla se l'email e la password sono corretti
 @app.route('/api/v1/Login', methods=['POST'])
@@ -123,10 +107,11 @@ def login():
     if not password:
         return jsonify(status='KO', message='Missing password', code=400)
     
+    mydb = get_db_connection()
     mycursor = mydb.cursor()
     try:
         # Verifica se l'email esiste
-        mycursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        mycursor.execute("SELECT * FROM users WHERE email LIKE %s", (email,))
         user = mycursor.fetchone()  # Ritorna la prima riga o None
         
         if user is None:
@@ -143,10 +128,6 @@ def login():
             return jsonify(status='KO', message='Invalid password', code=401)
         
         # Login riuscito
-        # Salva le informazioni dell'utente nella sessione
-        session['id_user'] = user_with_password[0]  # Supponendo che il primo campo sia l'ID utente
-        session['email'] = user_with_password[3]    # Supponendo che il quarto campo sia l'email
-
         # Converti i risultati in un dizionario chiave-valore
         # TODO evita che ritorni la password
         column_names = [desc[0] for desc in mycursor.description]
@@ -163,16 +144,13 @@ def login():
 
 @app.route('/api/v1/GetProfile', methods=['GET'])
 def get_profile():
-    if 'id_user' not in session:
-        return jsonify(status='KO', message='User not logged in', code=401)
-    
-    id_user = session['id_user']
-    email = session['email']
-    
-    # Esegui una query per recuperare il profilo dell'utente
+    id_user = request.args.get('id_user')
+    if not id_user:
+        return jsonify(status='KO', message='Missing id_user', code=400)
+    mydb = get_db_connection()
     mycursor = mydb.cursor()
     try:
-        mycursor.execute("SELECT * FROM users WHERE id = %s AND email = %s", (id_user, email))
+        mycursor.execute("SELECT * FROM users WHERE id = %s", (id_user,))
         user = mycursor.fetchone()  # Ritorna la prima riga o None
         if user is None:
             return jsonify(status='KO', message='User not found', code=404)
@@ -193,11 +171,10 @@ def get_profile():
 # ! togliere id estenro nella risposta
 @app.route('/api/v1/GetPantry', methods=['GET'])
 def get_Pantry():
-    if 'id_user' not in session:
-        return jsonify(status='KO', message='User not logged in')
-    
-    id_user = session['id_user']
-    
+    id_user = request.args.get('id_user')
+    if not id_user:
+        return jsonify(status='KO', message='Missing id_user')
+    mydb = get_db_connection()
     # Esegui una query per recuperare la dispensa dell'utente
     mycursor = mydb.cursor()
     try:
@@ -221,25 +198,20 @@ def get_Pantry():
 # Add Pantry with user id, ingredient id and grams
 @app.route('/api/v1/AddPantry', methods=['POST'])
 def add_pantry():
-    # Verifica se l'utente è loggato
-    if 'id_user' not in session:
-        return jsonify(status='KO', message='User not logged in')
-    
-    id_user = session['id_user']
-    
     data = request.get_json()
     if not data:
         return jsonify(status='KO', message='Your data is missing')
-    
+    id_user = data.get('id_user')
     id_ingredient = data.get('id_ingredient')
     grams = data.get('grams')
     units = data.get('units')
-    
+    if not id_user:
+        return jsonify(status='KO', message='Missing id_user')
     if not id_ingredient:
         return jsonify(status='KO', message='Missing id_ingredient')
     if not grams and not units:
         return jsonify(status='KO', message='Insert grams or units')
-        
+    mydb = get_db_connection()
     mycursor = mydb.cursor()
     try:
         mycursor.execute("INSERT INTO pantry (id_user, id_ingredient, units, grams) VALUES (%s, %s, %s, %s)", (id_user, id_ingredient, units, grams))
@@ -255,10 +227,6 @@ def add_pantry():
 
 @app.route('/api/v1/RunGreedy', methods=['POST'])
 def run_greedy():
-    # Verifica se l'utente è loggato
-    if 'id_user' not in session:
-        return jsonify(status='KO', message='User not logged in')
-
     data = request.get_json()
     if not data:
         return jsonify(status='KO', message='Your data is missing')
@@ -315,7 +283,7 @@ def search_ingredients():
     query = request.args.get('query')
     if not query:
         return jsonify(status='KO', message='Query parameter is missing', code=400)
-
+    mydb = get_db_connection()
     mycursor = mydb.cursor()
     try:
         mycursor.execute("SELECT * FROM ingredients WHERE name LIKE %s", (f"%{query}%",))
@@ -347,6 +315,7 @@ def add_selected_recipe():
     id_user = data.get('id_user')
     if not id_recipe or not id_user:
         return jsonify(status='KO', message='Missing id_recipe or id_user', code=400)
+    mydb = get_db_connection()
     mycursor = mydb.cursor()
     try:
         # Inserisci relazione in selected_recipes con la data corrente
@@ -401,6 +370,7 @@ def get_recipe_data():
     id_recipe = request.args.get('id_recipe')
     if not id_recipe:
         return jsonify(status='KO', message='Missing id_recipe', code=400)
+    mydb = get_db_connection()
     mycursor = mydb.cursor()
     try:
         mycursor.execute("""
@@ -423,9 +393,10 @@ def get_recipe_data():
     # ! si calcolano medie ecc. dal DB selected_recipes, oppure si effettua una chiamata al get_recipes_data 
 @app.route('/api/v1/GetRecipes_Statistic', methods=['GET'])
 def get_recipes_statistic():
-    if 'id_user' not in session:
-        return jsonify(status='KO', message='User not logged in', code=401)
-    id_user = session['id_user']
+    id_user = request.args.get('id_user')
+    if not id_user:
+        return jsonify(status='KO', message='Missing id_user', code=400)
+    mydb = get_db_connection()
     mycursor = mydb.cursor()
     try:
         # Prendi tutti gli id_recipe selezionati dall'utente nell'ultima settimana
