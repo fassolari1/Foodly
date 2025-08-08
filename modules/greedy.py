@@ -1,6 +1,7 @@
 def greedy_select_recipes(receips_data, user_ingredients):
     
-    return receips_data
+    #return receips_data
+
     # Convertiamo la lista di ingredienti dell'utente in un dizionario:
     # Esempio: {"carrots": 2, "tomato": 2}
     stock = {}

@@ -74,17 +74,28 @@ def registration():
     try:
         mycursor.execute("INSERT INTO users (name, surname, email, password) VALUES (%s, %s, %s, %s)", (name, surname, email, password))
         mydb.commit() #chiusura dell'inserimento
+        
+        # Recupera l'ID dell'utente appena inserito
+        user_id = mycursor.lastrowid
+        user_dict = {
+            'id': user_id,
+            'name': name,
+            'surname': surname,
+            'email': email
+        }
+        
+        mycursor.close()
+        return jsonify(status='OK', message='Registration completed successfully', data=user_dict)
 
     except mysql.connector.Error as err:
+        mycursor.close()
         if err.errno == 1062: # Duplicate entry error
             return jsonify(status='KO', message='Email already exists') #409 codice di conflitto
         else:
             return jsonify(status='KO', message='Database error: {}'.format(err)) #500 codice di errore interno
     except Exception as e:
+        mycursor.close()
         return jsonify(status='KO', message='An error occurred: {}'.format(e))
-    
-    mycursor.close()
-    return jsonify(status='OK', message='Registration completed successfully')
 
 # Login: controlla se l'email e la password sono corretti
 @app.route('/api/v1/Login', methods=['POST'])
@@ -150,13 +161,12 @@ def get_profile():
     mydb = get_db_connection()
     mycursor = mydb.cursor()
     try:
-        mycursor.execute("SELECT * FROM users WHERE id = %s", (id_user,))
+        mycursor.execute("SELECT id, name, surname, email FROM users WHERE id = %s", (id_user,))
         user = mycursor.fetchone()  # Ritorna la prima riga o None
         if user is None:
             return jsonify(status='KO', message='User not found', code=404)
         
         # Converti i risultati in un dizionario chiave-valore
-        # TODO evita che ritorni la password
         column_names = [desc[0] for desc in mycursor.description]
         user_dict = dict(zip(column_names, user))
         
