@@ -365,7 +365,7 @@ def add_selected_recipe():
             healty_score = ricetta.get('healthScore')
             mycursor.execute("""
                 INSERT INTO recipes_data (id_recipe, calories, protein, fat, saturated_fat, carbohydrates, fiber, sugar, sodium, vegetarian, vegan, gluten_free ,healty_score)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (id_recipe, calories, protein, fat, saturated_fat, carbohydrates, fiber, sugar, sodium, vegetarian, vegan, gluten_free, healty_score))
             mydb.commit()
         return jsonify(status='OK', message='Recipe added to selected_recipes and recipes_data')
@@ -389,7 +389,7 @@ def get_recipe_data():
         mycursor.execute("""
             SELECT calories, protein, fat, saturated_fat, carbohydrates, fiber, sugar, sodium, vegetarian, vegan, gluten_free
             FROM recipes_data WHERE id_recipe = %s
-        """, (id_recipe,))
+        """, (id_recipe))
         row = mycursor.fetchone()
         if not row:
             return jsonify(status='KO', message='Recipe not found in recipes_data', code=404)
