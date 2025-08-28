@@ -179,7 +179,7 @@ def get_profile():
     finally:
         mycursor.close()  # Chiudi il cursore
 
-# ! togliere id estenro nella risposta
+# TODO togliere id esterno nella risposta
 @app.route('/api/v1/GetPantry', methods=['GET'])
 def get_Pantry():
     id_user = request.args.get('id_user')
@@ -332,6 +332,7 @@ def add_selected_recipe():
         # Inserisci relazione in selected_recipes con la data corrente
         mycursor.execute("INSERT INTO selected_recipes (id_recipe, id_user, date) VALUES (%s, %s, NOW())", (id_recipe, id_user))
         mydb.commit()
+        
         # Verifica se la ricetta è già presente in recipes_data
         mycursor.execute("SELECT id_recipe FROM recipes_data WHERE id_recipe = %s", (id_recipe,))
         exists = mycursor.fetchone()
@@ -361,10 +362,11 @@ def add_selected_recipe():
             vegetarian = ricetta.get('vegetarian')
             vegan = ricetta.get('vegan')
             gluten_free = ricetta.get('glutenFree')
+            healty_score = ricetta.get('healthScore')
             mycursor.execute("""
-                INSERT INTO recipes_data (id_recipe, calories, protein, fat, saturated_fat, carbohydrates, fiber, sugar, sodium, vegetarian, vegan, gluten_free)
+                INSERT INTO recipes_data (id_recipe, calories, protein, fat, saturated_fat, carbohydrates, fiber, sugar, sodium, vegetarian, vegan, gluten_free ,healty_score)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (id_recipe, calories, protein, fat, saturated_fat, carbohydrates, fiber, sugar, sodium, vegetarian, vegan, gluten_free))
+            """, (id_recipe, calories, protein, fat, saturated_fat, carbohydrates, fiber, sugar, sodium, vegetarian, vegan, gluten_free, healty_score))
             mydb.commit()
         return jsonify(status='OK', message='Recipe added to selected_recipes and recipes_data')
     except mysql.connector.Error as err:
@@ -420,29 +422,20 @@ def get_recipes_statistic():
             return jsonify(status='KO', message='No recipes selected in the last week', code=404)
         
         recipe_ids = [row[0] for row in rows]
-
-        #Prendi dati kcal dal JSON recipes.json in base all'id
-        # ...existing code...
-
-        # Prendi dati kcal dal JSON recipes.json in base all'id
-        ricette_raw = data["receips"]["results"]  # Nota: "receips" non "recipes"
-
-        kcal_data = {rid: None for rid in recipe_ids}
-        for ricetta in ricette_raw:
-            id_ricetta = ricetta.get('id')
-            if id_ricetta in kcal_data:
-                nutrients = ricetta.get('nutrition', {}).get('nutrients', [])
-                # Trova le calorie nell'array dei nutrienti
-                calories = None
-                for nutrient in nutrients:
-                    if nutrient.get('name') == 'Calories':
-                        calories = nutrient.get('amount')
-                        break
-                
-                kcal_data[id_ricetta] = calories
-
-        return jsonify(status='OK', id_user=id_user, recipes=kcal_data)
-# ...existing code...
+        # Per ogni id_recipe, prendi i dati nutrizionali dalla tabella recipes_data
+        macronutrienti = ['calories', 'protein', 'fat', 'saturated_fat', 'carbohydrates', 'fiber', 'healty_score']
+        stats = {k: [] for k in macronutrienti}
+        for rid in recipe_ids:
+            mycursor.execute("""
+                SELECT calories, protein, fat, saturated_fat, carbohydrates, fiber, healty_score
+                FROM recipes_data WHERE id_recipe = %s
+            """, (rid,))
+            row = mycursor.fetchone()
+            if row:
+                for i, k in enumerate(macronutrienti):
+                    value = row[i]
+                    if value is not None:
+                        stats[k].append(float(value))
         # Calcola la media per ogni macronutriente
 #        media = {}
  #       for k in macronutrienti:
