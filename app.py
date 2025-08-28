@@ -441,7 +441,11 @@ def get_recipes_statistic():
         for k in macronutrienti:
             values = stats[k]
             media[k] = sum(values) / len(values) if values else None
-        return jsonify(status='OK', id_user=id_user, recipes=len(recipe_ids), average=media)
+        return jsonify(status='OK', message='OK', data={
+            'id_user' : id_user,
+            'recipes' : len(recipe_ids),
+            'average' : media
+        })
     except mysql.connector.Error as err:
         return jsonify(status='KO', message=f'Database error: {err}', code=500)
     except Exception as e:
