@@ -11,7 +11,8 @@ import json
 app = Flask(__name__)
 app.secret_key = "ajhaskjchksjdhcakjdhcjkashk" # Chiave segreta per le sessioni #TODO: Cambiare in produzione
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
-
+with open('modules/recipes.json' , "r") as json_data:
+    data = json.load(json_data) 
 #Configurazione del database MySQL
 def get_db_connection():
     url = config.getMySQLUrl()
@@ -417,28 +418,37 @@ def get_recipes_statistic():
         rows = mycursor.fetchall()
         if not rows:
             return jsonify(status='KO', message='No recipes selected in the last week', code=404)
-        #estrae il primo elemento (cioè l'id della ricetta) da ogni tupla della lista rows, e crea una lista di tutti gli id_recipe selezionati dall'utente nell'ultima settimana.
+        
         recipe_ids = [row[0] for row in rows]
-        # Per ogni id_recipe, prendi i dati nutrizionali dalla tabella recipes_data
-        macronutrienti = ['calories', 'protein', 'fat', 'saturated_fat', 'carbohydrates', 'fiber', 'sugar', 'sodium']
-        stats = {k: [] for k in macronutrienti}
-        for rid in recipe_ids:
-            mycursor.execute("""
-                SELECT calories, protein, fat, saturated_fat, carbohydrates, fiber, sugar, sodium
-                FROM recipes_data WHERE id_recipe = %s
-            """, (rid,))
-            row = mycursor.fetchone()
-            if row:
-                for i, k in enumerate(macronutrienti):
-                    value = row[i]
-                    if value is not None:
-                        stats[k].append(float(value))
+
+        #Prendi dati kcal dal JSON recipes.json in base all'id
+        # ...existing code...
+
+        # Prendi dati kcal dal JSON recipes.json in base all'id
+        ricette_raw = data["receips"]["results"]  # Nota: "receips" non "recipes"
+
+        kcal_data = {rid: None for rid in recipe_ids}
+        for ricetta in ricette_raw:
+            id_ricetta = ricetta.get('id')
+            if id_ricetta in kcal_data:
+                nutrients = ricetta.get('nutrition', {}).get('nutrients', [])
+                # Trova le calorie nell'array dei nutrienti
+                calories = None
+                for nutrient in nutrients:
+                    if nutrient.get('name') == 'Calories':
+                        calories = nutrient.get('amount')
+                        break
+                
+                kcal_data[id_ricetta] = calories
+
+        return jsonify(status='OK', id_user=id_user, recipes=kcal_data)
+# ...existing code...
         # Calcola la media per ogni macronutriente
-        media = {}
-        for k in macronutrienti:
-            values = stats[k]
-            media[k] = sum(values) / len(values) if values else None
-        return jsonify(status='OK', id_user=id_user, recipes=len(recipe_ids), average=media)
+#        media = {}
+ #       for k in macronutrienti:
+  #          values = stats[k]
+   #         media[k] = sum(values) / len(values) if values else None
+    #    return jsonify(status='OK', id_user=id_user, recipes=len(recipe_ids), average=media)
     except mysql.connector.Error as err:
         return jsonify(status='KO', message=f'Database error: {err}', code=500)
     except Exception as e:
