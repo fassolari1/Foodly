@@ -419,7 +419,6 @@ def get_recipes_statistic():
         """, (id_user,))
         rows = mycursor.fetchall()
         if not rows:
-            sss
             return jsonify(status='KO', message='No recipes selected in the last week', code=404)
         
         recipe_ids = [row[0] for row in rows]
