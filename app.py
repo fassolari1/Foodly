@@ -458,6 +458,16 @@ def get_recipes_statistic():
     #TODO ingredienti_disponibili presi da GetPantry
     #TODO sistemare il greedy in modo che riconosca le unità di misura
     #TODO Dobbiamo impostare Unità = medium, small, large, ecc.
+
+#TODO: LE ricette di oggi in Ricette
+    #Passare random TOT ricette
+
+#TODO in ricette si può mettere:
+    # Sommario
+    # Tipo di cucina (mediterranea, cinese, ecc.)
+    # dettagli di dieta (vegan, vegetariana, gluten free)
+    # Fasi di preparazione
+
     
 
 if __name__ == "__main__":
