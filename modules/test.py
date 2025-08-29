@@ -1,7 +1,23 @@
 import json
 import random  # Aggiungi l'import di random
 
+"""
+1. Get dei valori di conversione per tutti gli ingredienti (grams, cups, units)
+    Creo una funzione di conversione che prende l'ingrediente (for ing in ricetta["ingredients"].items()) prende l'unità presente nella ricetta di misura e se:
+    - g, mg, kg -> grams, 0.001*grams, 1000*grams
+    - cup, cups -> cups
+    - medium, large, small, sliced, units, ecc. -> units
+    - altro (TBSP, disk, un pizzico, un bicchiere, un pugno, ecc) -> 0
+2. Ricetta Realizzabile:
+    Confronto se grammi disponibili in dispensa di ogni ingrediente >= grammi richiesti in ricetta dello stesso ingrediente
+3. Score:
+    Somma dei grammi richiesti per ogni ingrediente che è presente in dispensa
+4. Prendo quella con Score più alto
+5. Aggiorno dispensa sottraendo i grammi usati
+6. Reitero
+"""
 
+#TODO Convertire tutto a grammi e conforntare con quelli disponibili
 def ricetta_realizzabile(ricetta, disp):
     """Controlla se la ricetta è realizzabile con gli ingredienti (priorità grams -> cups -> units)."""
     flag = False
@@ -18,6 +34,7 @@ def ricetta_realizzabile(ricetta, disp):
             disponibile = data_ing.get("units", 0)
         else:
             disponibile = 0
+            
         if disponibile != 0 and disponibile < quantita_richiesta:
             return False  # ingrediente presente ma non sufficiente
         elif disponibile != 0:
@@ -25,8 +42,9 @@ def ricetta_realizzabile(ricetta, disp):
 
     return flag
 
+#TODO: Converto tutto in grammi
 def calcola_punteggio(ricetta, disp):
-    """Punteggio = somma quantità richieste per gli ingredienti disponibili (stessa logica unit)."""
+    """Punteggio = somma quantità (grammi) richieste per gli ingredienti disponibili (stessa logica unit)."""
     score = 0
     for ing, info in ricetta["ingredients"].items():
         amount = info.get("amount", 0) or 0
@@ -43,6 +61,8 @@ def calcola_punteggio(ricetta, disp):
             score += amount
     return score
 
+#TODO: Aggiorno la dispensa sottrendo SOLO i grammi usati nella ricetta selezionata, cups e units vengono azzerati 
+# TODO perche farò un DELETE ALL e un insert con i soli grammi rimasti
 def aggiorna_ingredienti(disp, ricetta):
     """Sottrae la quantità usata dalla unit corrispondente (grams/cups/units)."""
     for ingrediente, info in ricetta["ingredients"].items():
@@ -58,7 +78,7 @@ def aggiorna_ingredienti(disp, ricetta):
         else:
             data_ing["units"] = max(0, data_ing.get("units", 0) - amount)
 
-    
+
 def seleziona_ricette(ingredienti_disponibili, lista_ricette):
     ricette_selezionate = []
 
@@ -116,6 +136,7 @@ def seleziona_ricette(ingredienti_disponibili, lista_ricette):
 with open('modules/ingredienti.json', 'r') as f_ing:
     _pantry = json.load(f_ing)
 
+#TODO Devo tenere solo i grammi di ogni ingrediente in Pantry
 # Dizionario dettagliato: per ogni ingrediente conserva somma di grams, cups e units
 ingredienti_dettaglio = {}
 for _item in _pantry.get('data', []):
