@@ -1,0 +1,129 @@
+Unità:
+- bag
+- bottle
+- box
+- boxes
+- bunch
+- bunches
+- can
+- cans
+- clove
+- cloves
+- container
+- cube
+- cubes
+- dash
+- dashes
+- drops
+- fillet
+- handful
+- handfuls
+- head
+- heads
+- jar
+- large
+- leaf
+- leaves
+- links
+- loaf
+- medium
+- medium head
+- medium size
+- package
+- piece
+- pieces
+- pinch
+- pinches
+- rib
+- ribs
+- scoop
+- servings
+- sheet
+- sheets
+- slice
+- slices
+- small
+- sprig
+- sprigs
+- square
+- stalk
+- stalks
+- stick
+- sticks
+- strips
+
+Cups:
+- 2-inch
+- 6-inch
+- 8-inch
+- c
+- cup
+- cups
+- halves
+- inch
+- inches
+- l
+- liter
+- liters
+- medium balls
+- medium piece
+- milliliters
+- ml
+- mls
+- null
+- packet
+- packets
+- pint
+- pints
+- quart
+- quarts
+- rack
+- small bunch
+- small can
+- small cloves
+- small handful
+- small head
+- small knob
+- small pieces
+- small pinch
+- small size
+- small tub
+- tablespoon
+- tablespoons
+- tbsp
+- tbsps
+- teaspoon
+- teaspoons
+- tsp
+- tsps
+
+Grammi:
+- extra large
+- g
+- glass
+- gr
+- gram
+- grams
+- kg
+- kilograms
+- large bunch
+- large can
+- large clove
+- large cloves
+- large handful
+- large handfuls
+- large head
+- large size
+- large slices
+- lb
+- lbs
+- ounce
+- ounces
+- oz
+- ozs
+- pkg
+- pound
+- pounds
+- serving
+- small bag
+- small sprig
