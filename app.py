@@ -179,6 +179,36 @@ def get_profile():
     finally:
         mycursor.close()  # Chiudi il cursore
 
+# GetIngredients: ritorna tutti gli ingredienti dalla tabella ingredients
+@app.route('/api/v1/GetIngredients', methods=['GET'])
+def get_ingredients():
+    auth_header = request.headers.get('Authorization')
+    token = validate_bearer_token(auth_header)
+    
+    if token is None:
+        return jsonify(status='KO', message='Bearer token is not present or invalid', code=401)
+    
+    mydb = get_db_connection()
+    mycursor = mydb.cursor()
+    try:
+        mycursor.execute("SELECT * FROM ingredients")
+        rows = mycursor.fetchall()
+        
+        if not rows:
+            return jsonify(status='KO', message='No ingredients found', code=404)
+        
+        # Converti i risultati in un dizionario chiave-valore
+        column_names = [desc[0] for desc in mycursor.description]
+        ingredients = [dict(zip(column_names, row)) for row in rows]
+        
+        return jsonify(status='OK', message='Ingredients retrieved', data=ingredients)
+    
+    except mysql.connector.Error as err:
+        return jsonify(status='KO', message=f'Database error: {err}', code=500)
+    
+    finally:
+        mycursor.close()
+
 # TODO togliere id esterno nella risposta
 @app.route('/api/v1/GetPantry', methods=['GET'])
 def get_Pantry():
@@ -192,7 +222,7 @@ def get_Pantry():
         mycursor.execute("SELECT * FROM pantry WHERE id_user = %s", (id_user,))
         rows = mycursor.fetchall()
         if not rows:
-            return jsonify(status='KO', message='No ingredients found in pantry')
+            return jsonify(status='OK', message='No ingredients found in pantry', data=[])
         
         # Converti i risultati in un dizionario chiave-valore
         column_names = [desc[0] for desc in mycursor.description]
@@ -222,10 +252,15 @@ def add_pantry():
         return jsonify(status='KO', message='Missing id_ingredient')
     if not grams and not units:
         return jsonify(status='KO', message='Insert grams or units')
+    elif grams is None and units is not None:
+        default_value = 'units' #setto il default_value: per la visualizzazione a frontend dell'unità di misura
+    else:
+        default_value = 'g'
+    
     mydb = get_db_connection()
     mycursor = mydb.cursor()
     try:
-        mycursor.execute("INSERT INTO pantry (id_user, id_ingredient, units, grams) VALUES (%s, %s, %s, %s)", (id_user, id_ingredient, units, grams))
+        mycursor.execute("INSERT INTO pantry (id_user, id_ingredient, units, grams, default_value) VALUES (%s, %s, %s, %s, %s)", (id_user, id_ingredient, units, grams, default_value))
         mydb.commit() #chiusura dell'inserimento
         return jsonify(status='OK', message='Ingredient added to pantry successfully')
     
@@ -235,6 +270,42 @@ def add_pantry():
     finally:
         mycursor.close()
 
+# Delete Pantry with user id and optional ingredient id or Delete ALL ingredients for that user
+@app.route('/api/v1/DeletePantry', methods=['DELETE'])
+def delete_pantry():
+    auth_header = request.headers.get('Authorization')
+    token = validate_bearer_token(auth_header)
+    if token is None:
+        return jsonify(status='KO', message='Bearer token is not present or invalid', code=401)
+    data = request.get_json()
+    if not data:
+        return jsonify(status='KO', message='Your data is missing', code=400)
+    
+    id_user = data.get('id_user')
+    ingredient_id = data.get('id_ingredient')
+    if not id_user:
+        return jsonify(status='KO', message='Missing id_user', code=400)
+    
+    mydb = get_db_connection()
+    mycursor = mydb.cursor()
+    try:
+        if ingredient_id is not None:
+            # Delete specific ingredient from user's pantry
+            mycursor.execute("DELETE FROM pantry WHERE id_user = %s AND id_ingredient = %s", (id_user, ingredient_id))
+        else:
+            # DELETE ALL ingredients from user's pantry
+            mycursor.execute("DELETE FROM pantry WHERE id_user = %s", (id_user,))
+        mydb.commit()
+        #Controlla quante righe sono state effettivamente eliminate
+        affected_rows = mycursor.rowcount
+        if affected_rows > 0:
+            return jsonify(status='OK', message='Ingredients deleted successfully', affected_rows=affected_rows)
+        else:
+            return jsonify(status='OK', message='No ingredients found to delete')
+    except mysql.connector.Error as err:
+        return jsonify(status='KO', message=f'Database error: {err}', code=500)
+    finally:
+        mycursor.close()
 
 @app.route('/api/v1/RunGreedy', methods=['POST'])
 def run_greedy():
@@ -281,6 +352,7 @@ def run_greedy():
         return jsonify(status='KO', message='recipes.json file not found')
     except Exception as e:
         return jsonify(status='KO', message=f'An error occurred: {e}')
+
 
 # SerchIndedients(query: SELECT * FROM ingredients WHERE name LIKE 'VAR%')
 @app.route('/api/v1/SearchIngredients', methods=['GET'])
@@ -419,7 +491,7 @@ def get_recipes_statistic():
         """, (id_user,))
         rows = mycursor.fetchall()
         if not rows:
-            return jsonify(status='KO', message='No recipes selected in the last week', code=404)
+            return jsonify(status='OK', message='No recipes selected in the last week', data={})
         
         recipe_ids = [row[0] for row in rows]
         # Per ogni id_recipe, prendi i dati nutrizionali dalla tabella recipes_data

@@ -1,0 +1,26 @@
+{
+    "data": [
+        {
+            "cups": 11.04,
+            "default_value": "units",
+            "grams": 1403.0,
+            "id": 53,
+            "id_ingredient": 1,
+            "id_user": 1,
+            "name_ingredient": "carrots",
+            "units": 23
+        },
+        {
+            "cups": 53.76,
+            "default_value": "units",
+            "grams": 6832.0,
+            "id": 54,
+            "id_ingredient": 1,
+            "id_user": 1,
+            "name_ingredient": "carrots",
+            "units": 112
+        }
+    ],
+    "message": "Pantry retrieved",
+    "status": "OK"
+}

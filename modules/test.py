@@ -94,12 +94,13 @@ ingredienti_disponibili = {
     # Se un ingrediente manca completamente, non potremo realizzare la ricetta se serve >0 di quello.
 }
 
+
 # ===== PARSE DEL JSON =====
 with open('modules/recipes.json' , "r") as json_data:
     data = json.load(json_data) 
 
 # Per semplicità, estraiamo la lista di ricette. In questo caso, ne hai solo 1.
-ricette_raw = data["receips"]["results"]
+ricette_raw = data["recipes"]["results"]
 
 # Vogliamo ottenere una lista di ricette in forma di dizionari come:
 # {
@@ -114,7 +115,7 @@ for ricetta_raw in ricette_raw:
     nome_ricetta = ricetta_raw["title"]
     ingredienti_ricetta = {}
     
-    for ing in ricetta_raw["missedIngredients"]:
+    for ing in ricetta_raw["nutrition"]['ingredients']:
         nome = ing["name"]  # es. "carrots"
         quantita = ing["amount"]  # es. 3.0
         # esempio (carrots,3.0),(tomato,4.0)
