@@ -5,8 +5,9 @@ from urllib.parse import urlparse
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from modules.recipes import recipesCore
-from modules.greedy import greedy_select_recipes
 import json
+from modules.test_2 import esegui_greedy
+
 
 app = Flask(__name__)
 app.secret_key = "ajhaskjchksjdhcakjdhcjkashk" # Chiave segreta per le sessioni #TODO: Cambiare in produzione
@@ -32,6 +33,52 @@ def validate_bearer_token(auth_header):
         if token == config.getBearerToken():
             return token
     return None
+
+def get_pantry_data(id_user):
+    """
+    Funzione helper per recuperare i dati della dispensa dell'utente.
+    Utilizzata sia da get_Pantry() che da run_greedy().
+    Include il nome dell'ingrediente tramite JOIN con la tabella ingredients.
+    
+    Args:
+        id_user (int): ID dell'utente
+        
+    Returns:
+        dict: Risultato con status, message e data (come get_Pantry)
+    """
+    try:
+        mydb = get_db_connection()
+        mycursor = mydb.cursor()
+        
+        # Query con JOIN per includere il nome dell'ingrediente
+        mycursor.execute("SELECT * FROM pantry WHERE id_user = %s", (id_user,))
+        rows = mycursor.fetchall()
+        
+        if not rows:
+            return {
+                "status": "OK", 
+                "message": "No ingredients found in pantry", 
+                "data": []
+            }
+        
+        # Converti i risultati in un dizionario chiave-valore
+        column_names = [desc[0] for desc in mycursor.description]
+        pantry = [dict(zip(column_names, row)) for row in rows]
+        
+        return {
+            "status": "OK", 
+            "message": "Pantry retrieved", 
+            "data": pantry
+        }
+        
+    except mysql.connector.Error as err:
+        return {
+            "status": "KO", 
+            "message": f"Database error: {err}", 
+            "data": []
+        }
+    finally:
+        mycursor.close()
 
 @app.route('/api/v1/getRecipes', methods=['POST'])
 def sendRequest():
@@ -141,7 +188,7 @@ def login():
         
         # Login riuscito
         # Converti i risultati in un dizionario chiave-valore
-        # TODO evita che ritorni la password
+        # evita che ritorni la password
         column_names = [desc[0] for desc in mycursor.description]
         user_dict = dict(zip(column_names, user_with_password))
         
@@ -215,26 +262,15 @@ def get_Pantry():
     id_user = request.args.get('id_user')
     if not id_user:
         return jsonify(status='KO', message='Missing id_user')
-    mydb = get_db_connection()
-    # Esegui una query per recuperare la dispensa dell'utente
-    mycursor = mydb.cursor()
-    try:
-        mycursor.execute("SELECT * FROM pantry WHERE id_user = %s", (id_user,))
-        rows = mycursor.fetchall()
-        if not rows:
-            return jsonify(status='OK', message='No ingredients found in pantry', data=[])
-        
-        # Converti i risultati in un dizionario chiave-valore
-        column_names = [desc[0] for desc in mycursor.description]
-        pantry = [dict(zip(column_names, row)) for row in rows]
-        
-        return jsonify(status='OK', message='Pantry retrieved', data=pantry)
     
-    except mysql.connector.Error as err:
-        return jsonify(status='KO', message=f'Database error: {err}')
+    # Utilizza la funzione helper per recuperare i dati
+    result = get_pantry_data(id_user)
     
-    finally:
-        mycursor.close()
+    return jsonify(
+        status=result["status"], 
+        message=result["message"], 
+        data=result["data"]
+    )
 
 # Add Pantry with user id, ingredient id and grams
 @app.route('/api/v1/AddPantry', methods=['POST'])
@@ -307,45 +343,78 @@ def delete_pantry():
     finally:
         mycursor.close()
 
-@app.route('/api/v1/RunGreedy', methods=['POST'])
-def run_greedy():
-    data = request.get_json()
-    if not data:
-        return jsonify(status='KO', message='Your data is missing')
+@app.route('/api/v1/GetGreedyRecipes', methods=['GET'])
+def get_greedy_recipes():
+    # Recupera l'id_user dai parametri GET
+    id_user = request.args.get('id_user')
+    if not id_user:
+        return jsonify(status='KO', message='Missing id_user')
 
-    ingredienti_disponibili = data.get('ingredienti_disponibili')
+    # Recupera gli ingredienti utilizzando get_pantry_data() (stessa logica di get_Pantry)
+    pantry_result = get_pantry_data(id_user)
+    
+    if pantry_result["status"] != "OK":
+        return jsonify(status='KO', message=pantry_result["message"])
+    
+    if not pantry_result["data"]:
+        return jsonify(status='KO', message='No ingredients found in pantry for this user')
+    
+    # Converte i dati della dispensa nel formato richiesto da test_2.py
+    ingredienti_disponibili = {}
+    for item in pantry_result["data"]:
+        nome = item.get("name_ingredient")
+        grams = item.get("grams", 0) or 0
+        
+        if nome and grams > 0:
+            if nome in ingredienti_disponibili:
+                ingredienti_disponibili[nome] += grams
+            else:
+                ingredienti_disponibili[nome] = grams
+
     if not ingredienti_disponibili:
-        return jsonify(status='KO', message='Missing ingredienti_disponibili')
+        return jsonify(status='KO', message='No ingredients with grams found in pantry')
 
-    # Importa la funzione Greedy da test.py
-    from modules.test import seleziona_ricette
-
-    # Carica le ricette dal file JSON
+    # Recupera il dizionario di conversione dal database
     try:
-        with open('modules/recipes.json', "r") as json_data:
-            data = json.load(json_data)
-        ricette_raw = data["receips"]["results"]
+        mydb = get_db_connection()
+        mycursor = mydb.cursor()
+        
+        # Query per recuperare i dati di conversione dalla tabella ingredients
+        mycursor.execute("SELECT name, grams_for_units, grams_for_cups FROM ingredients")
+        rows = mycursor.fetchall()
+        
+        # Crea il dizionario di conversione
+        dizionario_conversione = {}
+        for row in rows:
+            name, grams_for_units, grams_for_cups = row
+            dizionario_conversione[name] = {
+                "grams_for_units": grams_for_units or 0,
+                "grams_for_cups": grams_for_cups or 0
+            }
+        
+        mycursor.close()
+        mydb.close()
+        
+    except mysql.connector.Error as err:
+        return jsonify(status='KO', message=f'Database error retrieving conversion data: {err}')
 
-        # Prepara la lista di ricette
-        lista_ricette = []
-        for ricetta_raw in ricette_raw:
-            nome_ricetta = ricetta_raw["title"]
-            ingredienti_ricetta = {}
-            for ing in ricetta_raw["missedIngredients"]:
-                nome = ing["name"]
-                quantita = ing["amount"]
-                ingredienti_ricetta[nome] = quantita
-            lista_ricette.append({
-                "title": nome_ricetta,
-                "ingredients": ingredienti_ricetta
-            })
-
-        # Esegui l'algoritmo Greedy
-        risultato = seleziona_ricette(ingredienti_disponibili, lista_ricette)
+    # Esegui l'algoritmo Greedy
+    try:
+        risultato, ingredienti_residui = esegui_greedy(ingredienti_disponibili, dizionario_conversione)
+        
+        return jsonify(
+            status='OK',
+            message='Greedy algorithm executed successfully',
+            ricette_selezionate=risultato,
+            ingredienti_residui=ingredienti_residui
+        )
+        
+    except Exception as e:
+        return jsonify(status='KO', message=f'Error executing greedy algorithm: {str(e)}')
 
         return jsonify(status='OK', message='Greedy algorithm executed', data={
             "ricette_selezionate": risultato,
-            "ingredienti_residui": ingredienti_disponibili
+            "ingredienti_residui": ingredienti_residui
         })
 
     except FileNotFoundError:
