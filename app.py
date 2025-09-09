@@ -6,7 +6,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from modules.recipes import recipesCore
 import json
-from modules.test_2 import esegui_greedy
+from modules.greedy import esegui_greedy
 
 
 app = Flask(__name__)
@@ -412,15 +412,13 @@ def get_greedy_recipes():
     except Exception as e:
         return jsonify(status='KO', message=f'Error executing greedy algorithm: {str(e)}')
 
-        return jsonify(status='OK', message='Greedy algorithm executed', data={
-            "ricette_selezionate": risultato,
-            "ingredienti_residui": ingredienti_residui
-        })
-
     except FileNotFoundError:
         return jsonify(status='KO', message='recipes.json file not found')
     except Exception as e:
         return jsonify(status='KO', message=f'An error occurred: {e}')
+    
+    #TODO (fac.) infine chiamata a deletePantry 
+    # e AddPantry per aggiungere i residui alla dispensa dell'utente però un po inutile perché se non ha trovato 
 
 
 # SerchIndedients(query: SELECT * FROM ingredients WHERE name LIKE 'VAR%')
@@ -595,11 +593,6 @@ def get_recipes_statistic():
         mycursor.close()
 
 
-#TODO: Greedy:
-    #TODO ingredienti_disponibili presi da GetPantry
-    #TODO sistemare il greedy in modo che riconosca le unità di misura
-    #TODO Dobbiamo impostare Unità = medium, small, large, ecc.
-
 #TODO: LE ricette di oggi in Ricette
     #Passare random TOT ricette
 
@@ -610,6 +603,5 @@ def get_recipes_statistic():
     # Fasi di preparazione
 
     
-
 if __name__ == "__main__":
     app.run(port=8080, debug=True)
