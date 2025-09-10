@@ -405,8 +405,10 @@ def get_greedy_recipes():
         return jsonify(
             status='OK',
             message='Greedy algorithm executed successfully',
-            ricette_selezionate=risultato,
-            ingredienti_residui=ingredienti_residui
+            data={
+                "ricette_selezionate": risultato,
+                "ingredienti_residui": ingredienti_residui
+            }
         )
         
     except Exception as e:

@@ -107,10 +107,10 @@ def ricetta_realizzabile(ricetta, disp):
     """
     Controlla se la ricetta è realizzabile con gli ingredienti attualmente disponibili.
     Confronta i grammi disponibili in dispensa con i grammi richiesti nella ricetta (convertiti).
-    Itera per gli ingredienti della ricetta ed esegue la conversione dei soli ingredienti 
-    della ricetta che sono anche nella dispensa.
+    Utilizza una simulazione completa per gestire ingredienti duplicati (es. red potato + white potato).
     """
     flag = False
+    dispensa_temporanea = disp.copy()  # Copia per simulazione senza modificare l'originale
     
     # Itera per gli ingredienti della ricetta (lista di dizionari)
     for ingrediente_ricetta in ricetta["ingredients"]:
@@ -119,7 +119,7 @@ def ricetta_realizzabile(ricetta, disp):
         unita = ingrediente_ricetta["unit"]
         
         # Usa la nuova funzione per trovare l'ingrediente corrispondente in dispensa
-        nome_dispensa, grammi_disponibili = trova_ingrediente_in_dispensa(nome_ricetta, disp)
+        nome_dispensa, grammi_disponibili = trova_ingrediente_in_dispensa(nome_ricetta, dispensa_temporanea)
         
         # Se abbiamo trovato l'ingrediente in dispensa
         if nome_dispensa and grammi_disponibili > 0: 
@@ -130,6 +130,8 @@ def ricetta_realizzabile(ricetta, disp):
             if grammi_disponibili < grammi_richiesti and grammi_richiesti > 0:
                 return False
             else:
+                # Sottrai dalla dispensa temporanea per simulare l'utilizzo
+                dispensa_temporanea[nome_dispensa] = max(0, dispensa_temporanea[nome_dispensa] - grammi_richiesti)
                 flag = True
     
     return flag
@@ -139,38 +141,50 @@ def calcola_punteggio(ricetta, disp):
     """
     Calcola il punteggio della ricetta sommando i grammi richiesti per ogni ingrediente 
     che è presente in dispensa (convertendo le quantità in grammi).
+    Utilizza una simulazione per gestire correttamente ingredienti duplicati.
     """
     score = 0
+    dispensa_temporanea = disp.copy()  # Copia per simulazione
+    
     for ingrediente_ricetta in ricetta["ingredients"]:
         nome_ricetta = ingrediente_ricetta["name"]
         quantita_richiesta = ingrediente_ricetta["amount"]
         unita = ingrediente_ricetta["unit"]
         
         # Usa la nuova funzione per trovare l'ingrediente corrispondente in dispensa
-        nome_dispensa, grammi_disponibili = trova_ingrediente_in_dispensa(nome_ricetta, disp)
+        nome_dispensa, grammi_disponibili = trova_ingrediente_in_dispensa(nome_ricetta, dispensa_temporanea)
         
         # Se l'ingrediente è disponibile in dispensa
         if nome_dispensa and grammi_disponibili > 0:
             # Converte la quantità richiesta in grammi e la aggiunge al punteggio (usando il nome della dispensa)
             grammi_richiesti = converti_a_grammi(nome_dispensa, quantita_richiesta, unita)
-            score += grammi_richiesti
+            
+            # Aggiungi al punteggio solo se abbiamo abbastanza ingrediente
+            if grammi_disponibili >= grammi_richiesti and grammi_richiesti > 0:
+                score += grammi_richiesti
+                # Sottrai dalla dispensa temporanea per la prossima iterazione
+                dispensa_temporanea[nome_dispensa] = max(0, dispensa_temporanea[nome_dispensa] - grammi_richiesti)
     
     return score
 
 
 # TODO perche farò un DELETE ALL e un insert con i soli grammi rimasti?
-def aggiorna_ingredienti(disp, ricetta):
+def aggiorna_ingredienti(disp, ricetta, nome_ricetta_selezionata=None):
     """
     Aggiorna il dizionario degli ingredienti disponibili sottraendo la quantità usata.
     Sottrae SOLO i grammi usati nella ricetta selezionata.
     """
+    # Stampa il nome della ricetta una sola volta all'inizio
+    if nome_ricetta_selezionata:
+        print(f"ricetta {nome_ricetta_selezionata}:")
+    
     for ingrediente_ricetta in ricetta["ingredients"]:
-        nome_ricetta = ingrediente_ricetta["name"]
+        nome_ingrediente_ricetta = ingrediente_ricetta["name"]
         quantita_richiesta = ingrediente_ricetta["amount"]
         unita = ingrediente_ricetta["unit"]
         
         # Usa la nuova funzione per trovare l'ingrediente corrispondente in dispensa
-        nome_dispensa, grammi_disponibili = trova_ingrediente_in_dispensa(nome_ricetta, disp)
+        nome_dispensa, grammi_disponibili = trova_ingrediente_in_dispensa(nome_ingrediente_ricetta, disp)
         
         if nome_dispensa and grammi_disponibili > 0:
             # Converte la quantità richiesta in grammi (usando il nome della dispensa)
@@ -221,10 +235,12 @@ def seleziona_ricette(ingredienti_disponibili, lista_ricette):
         # Aggiungi la ricetta selezionata
         ricette_selezionate.append({
             "title": migliore_ricetta["title"],
+            "id": migliore_ricetta.get("id", ""),
             "score": migliore_punteggio,
+            "spoonacularSourceUrl": migliore_ricetta.get("spoonacularSourceUrl", "")
         })
         # Aggiorna gli ingredienti disponibili
-        aggiorna_ingredienti(ingredienti_disponibili, migliore_ricetta)
+        aggiorna_ingredienti(ingredienti_disponibili, migliore_ricetta, migliore_ricetta["title"])
         # Rimuovi la ricetta scelta dal set di valutabili
         ricette_da_valutare.remove(migliore_ricetta)
 
@@ -246,6 +262,8 @@ ricette_raw = data["recipes"]["results"]
 lista_ricette = []
 for ricetta in ricette_raw:
     nome_ricetta = ricetta["title"]
+    id_ricetta = ricetta.get("id", "")  # Recupera l'ID se presente
+    url_ricetta = ricetta.get("spoonacularSourceUrl", "")  # Recupera l'URL se presente
     ingredienti_ricetta = []
     
     for ing in ricetta["nutrition"]['ingredients']:
@@ -262,6 +280,8 @@ for ricetta in ricette_raw:
     
     lista_ricette.append({
         "title": nome_ricetta,
+        "id": id_ricetta,
+        "spoonacularSourceUrl": url_ricetta,
         "ingredients": ingredienti_ricetta
     })
 
@@ -301,6 +321,7 @@ def esegui_greedy(ingredienti_disponibili_input=None, dizionario_conversione_inp
     return risultato, ingredienti_da_usare
 
 
+'''
 # TEST
 # Esecuzione diretta per test (quando il file viene eseguito direttamente)
 if __name__ == "__main__":
@@ -348,3 +369,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Errore durante il test: {e}")
         print("In produzione, gli ingredienti vengono sempre passati da app.py")
+'''
