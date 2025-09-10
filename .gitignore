@@ -1,3 +1,5 @@
 .venv
 .vscode/settings.json
 comandi.txt
+recipes.json
+recipes_old.json
