@@ -237,7 +237,8 @@ def seleziona_ricette(ingredienti_disponibili, lista_ricette):
             "title": migliore_ricetta["title"],
             "id": migliore_ricetta.get("id", ""),
             "score": migliore_punteggio,
-            "spoonacularSourceUrl": migliore_ricetta.get("spoonacularSourceUrl", "")
+            "spoonacularSourceUrl": migliore_ricetta.get("spoonacularSourceUrl", ""),
+            "image": migliore_ricetta.get("image", "")
         })
         # Aggiorna gli ingredienti disponibili
         aggiorna_ingredienti(ingredienti_disponibili, migliore_ricetta, migliore_ricetta["title"])
@@ -264,6 +265,7 @@ for ricetta in ricette_raw:
     nome_ricetta = ricetta["title"]
     id_ricetta = ricetta.get("id", "")  # Recupera l'ID se presente
     url_ricetta = ricetta.get("spoonacularSourceUrl", "")  # Recupera l'URL se presente
+    image_ricetta = ricetta.get("image", "")  # Recupera l'immagine se presente
     ingredienti_ricetta = []
     
     for ing in ricetta["nutrition"]['ingredients']:
@@ -282,6 +284,7 @@ for ricetta in ricette_raw:
         "title": nome_ricetta,
         "id": id_ricetta,
         "spoonacularSourceUrl": url_ricetta,
+        "image": image_ricetta,
         "ingredients": ingredienti_ricetta
     })
 

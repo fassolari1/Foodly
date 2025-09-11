@@ -481,7 +481,7 @@ def add_selected_recipe():
             # Carica recipes.json e cerca la ricetta
             with open('modules/recipes.json', 'r') as f:
                 data_json = json.load(f)
-            ricette = data_json.get('receips', {}).get('results', [])
+            ricette = data_json.get('recipes', {}).get('results', [])
             ricetta = next((r for r in ricette if str(r.get('id')) == str(id_recipe)), None)
             if not ricetta:
                 return jsonify(status='KO', message='Recipe not found in JSON', code=404)

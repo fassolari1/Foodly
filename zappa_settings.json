@@ -12,6 +12,9 @@
         "profile_name": "default",
         "project_name": "foodly",
         "runtime": "python3.9",
-        "s3_bucket": "zappa-ctnnoca6i"
+        "s3_bucket": "zappa-ctnnoca6i",
+        "timeout_seconds": 900,
+        "memory_size": 1024,
+        "keep_warm": false
     }
 }
