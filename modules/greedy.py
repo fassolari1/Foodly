@@ -103,12 +103,35 @@ def trova_ingrediente_in_dispensa(nome_ricetta, dispensa):
     return None, 0
 
 
-def ricetta_realizzabile(ricetta, disp):
+def ricetta_realizzabile(ricetta, disp, filtri_dietetici=None):
     """
     Controlla se la ricetta è realizzabile con gli ingredienti attualmente disponibili.
     Confronta i grammi disponibili in dispensa con i grammi richiesti nella ricetta (convertiti).
     Utilizza una simulazione completa per gestire ingredienti duplicati (es. red potato + white potato).
+    Inoltre verifica se la ricetta rispetta i filtri dietetici specificati.
+    
+    Args:
+        ricetta (dict): Dizionario contenente i dati della ricetta
+        disp (dict): Dizionario della dispensa con ingredienti disponibili
+        filtri_dietetici (dict): Dizionario con filtri dietetici (vegetarian, vegan, glutenFree)
+    
+    Returns:
+        bool: True se la ricetta è realizzabile e rispetta i filtri, False altrimenti
     """
+    # Controllo dei filtri dietetici
+    if filtri_dietetici:
+        # Se è richiesto vegetariano, la ricetta deve essere vegetariana
+        if filtri_dietetici.get('vegetarian', False) and not ricetta.get('vegetarian', False):
+            return False
+        
+        # Se è richiesto vegano, la ricetta deve essere vegana
+        if filtri_dietetici.get('vegan', False) and not ricetta.get('vegan', False):
+            return False
+        
+        # Se è richiesto senza glutine, la ricetta deve essere senza glutine
+        if filtri_dietetici.get('glutenFree', False) and not ricetta.get('glutenFree', False):
+            return False
+    
     flag = False
     dispensa_temporanea = disp.copy()  # Copia per simulazione senza modificare l'originale
     
@@ -195,7 +218,7 @@ def aggiorna_ingredienti(disp, ricetta, nome_ricetta_selezionata=None):
             print(f"{nome_dispensa}: {disp[nome_dispensa]} grammi rimasti")
 
 
-def seleziona_ricette(ingredienti_disponibili, lista_ricette):
+def seleziona_ricette(ingredienti_disponibili, lista_ricette, filtri_dietetici=None):
     ricette_selezionate = []
 
     # Per evitare di modificare la lista originale
@@ -209,7 +232,7 @@ def seleziona_ricette(ingredienti_disponibili, lista_ricette):
 
         # Valuta tutte le ricette realizzabili
         for ricetta in ricette_da_valutare:
-            if ricetta_realizzabile(ricetta, ingredienti_disponibili):
+            if ricetta_realizzabile(ricetta, ingredienti_disponibili, filtri_dietetici):
                 score = calcola_punteggio(ricetta, ingredienti_disponibili)
                 
                 # Considera solo ricette con score > 0
@@ -266,6 +289,12 @@ for ricetta in ricette_raw:
     id_ricetta = ricetta.get("id", "")  # Recupera l'ID se presente
     url_ricetta = ricetta.get("spoonacularSourceUrl", "")  # Recupera l'URL se presente
     image_ricetta = ricetta.get("image", "")  # Recupera l'immagine se presente
+    
+    # Recupera i campi dietetici
+    vegetarian = ricetta.get("vegetarian", False)
+    vegan = ricetta.get("vegan", False)
+    gluten_free = ricetta.get("glutenFree", False)
+    
     ingredienti_ricetta = []
     
     for ing in ricetta["nutrition"]['ingredients']:
@@ -285,11 +314,14 @@ for ricetta in ricette_raw:
         "id": id_ricetta,
         "spoonacularSourceUrl": url_ricetta,
         "image": image_ricetta,
-        "ingredients": ingredienti_ricetta
+        "ingredients": ingredienti_ricetta,
+        "vegetarian": vegetarian,
+        "vegan": vegan,
+        "glutenFree": gluten_free
     })
 
 # ===== ESECUZIONE ALGORITMO GREEDY =====
-def esegui_greedy(ingredienti_disponibili_input=None, dizionario_conversione_input=None):
+def esegui_greedy(ingredienti_disponibili_input=None, dizionario_conversione_input=None, filtri_dietetici_input=None):
     """
     Funzione wrapper per eseguire l'algoritmo greedy.
     Può essere chiamata da app.py passando ingredienti e dizionario di conversione come parametri.
@@ -298,6 +330,7 @@ def esegui_greedy(ingredienti_disponibili_input=None, dizionario_conversione_inp
     Args:
         ingredienti_disponibili_input (dict): Dizionario degli ingredienti disponibili
         dizionario_conversione_input (dict): Dizionario di conversione da DB
+        filtri_dietetici_input (dict): Dizionario con filtri dietetici (vegetarian, vegan, glutenFree)
     
     Returns:
         tuple: (ricette_selezionate, ingredienti_residui)
@@ -318,8 +351,8 @@ def esegui_greedy(ingredienti_disponibili_input=None, dizionario_conversione_inp
     ingredienti_da_usare = ingredienti_disponibili_input.copy()
     #? garantisce che la funzione sia predicibile, riutilizzabile e non distruttiva - principi fondamentali per un codice robusto e manutenibile!
     
-    # Esegui l'algoritmo greedy
-    risultato = seleziona_ricette(ingredienti_da_usare, lista_ricette)
+    # Esegui l'algoritmo greedy con i filtri dietetici
+    risultato = seleziona_ricette(ingredienti_da_usare, lista_ricette, filtri_dietetici_input)
     
     return risultato, ingredienti_da_usare
 

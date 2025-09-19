@@ -307,7 +307,7 @@ def add_pantry():
         mycursor.close()
 
 # Delete Pantry with user id and optional ingredient id or Delete ALL ingredients for that user
-@app.route('/api/v1/DeletePantry', methods=['DELETE'])
+@app.route('/api/v1/DeletePantry', methods=['POST'])
 def delete_pantry():
     auth_header = request.headers.get('Authorization')
     token = validate_bearer_token(auth_header)
@@ -349,6 +349,18 @@ def get_greedy_recipes():
     id_user = request.args.get('id_user')
     if not id_user:
         return jsonify(status='KO', message='Missing id_user')
+    
+    # Recupera i filtri dietetici opzionali (solo se passati come '1')
+    vegetarian = request.args.get('vegetarian') == '1'
+    vegan = request.args.get('vegan') == '1'
+    gluten_free = request.args.get('glutenFree') == '1'
+    
+    # Crea il dizionario dei filtri dietetici
+    filtri_dietetici = {
+        'vegetarian': vegetarian,
+        'vegan': vegan,
+        'glutenFree': gluten_free
+    }
 
     # Recupera gli ingredienti utilizzando get_pantry_data() (stessa logica di get_Pantry)
     pantry_result = get_pantry_data(id_user)
@@ -400,7 +412,7 @@ def get_greedy_recipes():
 
     # Esegui l'algoritmo Greedy
     try:
-        risultato, ingredienti_residui = esegui_greedy(ingredienti_disponibili, dizionario_conversione)
+        risultato, ingredienti_residui = esegui_greedy(ingredienti_disponibili, dizionario_conversione, filtri_dietetici)
         
         return jsonify(
             status='OK',
